@@ -17,8 +17,8 @@ module warp #(
     // lw writeback
     input wire  mem_done,
     input wire [1:0]  lw_warp_id,
-    input wire [3:0]  lw_reg,
-    input wire [7:0]  lw_data   [0:15],
+    input wire [3:0]  lw_dest_in,
+    input wire [7:0]  lw_data_in   [0:15],
 
     // outputs to alu block
     output wire [7:0] RS1 [0:15],
