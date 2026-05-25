@@ -4,9 +4,10 @@ module warp_scheduler #(parameter NUM_WARPS = 4) (
     input mem_done,
     input halt,
     input [1:0]warp_id_from_ms,
+    input warp_active[0:NUM_WARPS-1],
 
     output [1:0]warp_id_to_ms,
-    output [15:0]present_warp_pc,
+    output [7:0]present_warp_pc,
     output [15:0]present_warp_mask,
     output [1:0]current_warp_id
 );
@@ -14,7 +15,7 @@ module warp_scheduler #(parameter NUM_WARPS = 4) (
 reg [1:0]current_warp;
 
 // Warp-Table
-reg [15:0]warp_pc[0:NUM_WARPS-1];
+reg [7:0]warp_pc[0:NUM_WARPS-1];
 reg [15:0]warp_mask[0:NUM_WARPS-1];
 reg warp_stalled[0:NUM_WARPS-1];
 reg warp_finished[0:NUM_WARPS-1];
@@ -38,10 +39,10 @@ always @(posedge clk) begin
         current_warp  <= 0;
         present_state <= IDLE;
 
-        warp_pc[0] <= 16'h0000;
-        warp_pc[1] <= 16'h4000;
-        warp_pc[2] <= 16'h8000;
-        warp_pc[3] <= 16'hC000;
+        warp_pc[0] <= 8'h00;
+        warp_pc[1] <= 8'h40;
+        warp_pc[2] <= 8'h80;
+        warp_pc[3] <= 8'hC0;
     end
     else begin
         case(present_state)
@@ -54,17 +55,24 @@ always @(posedge clk) begin
                     warp_finished[current_warp]   <= 1;
                     present_state                 <= HALTED;
                 end
-                if(mem_done)
+                if(mem_done) begin
                     warp_stalled[warp_id_from_ms] <= 0;
+                    warp_pc[warp_id_from_ms] <= warp_pc[warp_id_from_ms] + 1;
+                end
+                if((mem_req == 0) && (halt == 0)) begin
+                    warp_pc[current_warp] <= warp_pc[current_warp] + 1;
+                end
             end
             SEARCHING: begin
-                if(mem_done)
+                if(mem_done) begin
                     warp_stalled[warp_id_from_ms] <= 0;
+                    warp_pc[warp_id_from_ms] <= warp_pc[warp_id_from_ms] + 1;
+                end
                 found = 0;
                 for(integer i=0; i < NUM_WARPS ; i=i+1) begin
                     integer id;
                     id = (current_warp + i) % NUM_WARPS;
-                    if(warp_stalled[id]==0 && warp_finished[id]==0 && found==0) begin
+                    if(warp_stalled[id]==0 && warp_finished[id]==0 && found==0 && warp_active[id]) begin
                         current_warp  <= id;
                         present_state <= IDLE;
                         found = 1;
@@ -73,13 +81,15 @@ always @(posedge clk) begin
                 end
             end
             HALTED: begin
-                if(mem_done)
+                if(mem_done) begin
                     warp_stalled[warp_id_from_ms] <= 0;
+                    warp_pc[warp_id_from_ms] <= warp_pc[warp_id_from_ms] + 1;
+                end
                 found = 0;
                 for(integer i=0; i < NUM_WARPS ; i=i+1) begin
                     integer id;
                     id = (current_warp + i) % NUM_WARPS;
-                    if(warp_stalled[id]==0 && warp_finished[id]==0 && found==0) begin
+                    if(warp_stalled[id]==0 && warp_finished[id]==0 && found==0 && warp_active[id]) begin
                         current_warp  <= id;
                         present_state <= IDLE;
                         found = 1;
