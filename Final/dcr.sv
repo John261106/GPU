@@ -5,7 +5,7 @@
 
 //     input       dcr_wr_ena,
 //     input  [7:0]device_control_data,
-//     output      thread_count
+//     output [7:0]thread_count
 // );
 
 //     reg [7:0]device_control_register;
@@ -17,4 +17,6 @@
 //             device_control_register <= device_control_data;
 //         end 
 //     end
+
+//     assign thread_count = device_control_register;
 // endmodule
